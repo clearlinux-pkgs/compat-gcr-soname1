@@ -1,0 +1,263 @@
+commit 8bf5750edf448f113615bab1cff3bdb5ddbb5557
+Author: Corentin Noël <corentin.noel@collabora.com>
+Date:   Fri Apr 8 13:05:08 2022 +0200
+
+    meson: Declare libversion variables and consistently use it
+    
+    Do not rely on major_version to manually create the library names.
+    Make sure to be consistent and use a single variable for all the library names
+    and folder mentions.
+
+diff --git a/docs/gck/meson.build b/docs/gck/meson.build
+index f06381b..ab859d9 100644
+--- a/docs/gck/meson.build
++++ b/docs/gck/meson.build
+@@ -6,13 +6,13 @@ gck_toml = configure_file(
+   input: 'gck.toml.in',
+   output: 'gck.toml',
+   configuration: {
+-    'GCK_VERSION': gck_major_version,
++    'GCK_VERSION': gck_api_version,
+   },
+ )
+ 
+ gck_docs = custom_target('gck-docs',
+   input: gck_gir[0],
+-  output: 'gck-@0@'.format(gck_major_version),
++  output: gck_basename,
+   command: [
+     gi_docgen,
+     'generate',
+diff --git a/docs/gcr/meson.build b/docs/gcr/meson.build
+index cf6532f..d80b7c7 100644
+--- a/docs/gcr/meson.build
++++ b/docs/gcr/meson.build
+@@ -8,14 +8,14 @@ gcr_base_toml = configure_file(
+   input: 'gcr-base.toml.in',
+   output: '@BASENAME@',
+   configuration: {
+-    'GCR_VERSION': gcr_major_version,
+-    'GCK_VERSION': gck_major_version,
++    'GCR_VERSION': gcr_api_version,
++    'GCK_VERSION': gck_api_version,
+   },
+ )
+ 
+ gcr_base_docs = custom_target('gcr-docs',
+   input: gcr_gir[0],
+-  output: 'gcr-@0@'.format(gcr_major_version),
++  output: gcr_basename,
+   command: [
+     gi_docgen,
+     'generate',
+diff --git a/docs/ui/meson.build b/docs/ui/meson.build
+index 49ea4ca..3666f0d 100644
+--- a/docs/ui/meson.build
++++ b/docs/ui/meson.build
+@@ -6,14 +6,14 @@ gcr_ui_toml = configure_file(
+   input: 'gcr-ui.toml.in',
+   output: '@BASENAME@',
+   configuration: {
+-    'GCR_VERSION': gcr_major_version,
+-    'GCK_VERSION': gck_major_version,
++    'GCR_VERSION': gcr_api_version,
++    'GCK_VERSION': gck_api_version,
+   },
+ )
+ 
+ gcr_ui_docs = custom_target('gcr-ui-docs',
+   input: gcr_ui_gir[0],
+-  output: 'gcr-ui-@0@'.format(gcr_major_version),
++  output: gcr_ui_basename,
+   command: [
+     gi_docgen,
+     'generate',
+diff --git a/gck/meson.build b/gck/meson.build
+index a21a1e9..e461509 100644
+--- a/gck/meson.build
++++ b/gck/meson.build
+@@ -1,4 +1,5 @@
+-gck_headers_install_dir = 'gck-@0@'.format(gck_major_version) / 'gck'
++gck_header_subdir = 'gck-@0@'.format(gck_api_version)
++gck_headers_install_dir = gck_header_subdir / 'gck'
+ 
+ gck_sources_public = files(
+   'gck-attributes.c',
+@@ -86,7 +87,7 @@ gck_linkflags = cc.get_supported_link_arguments(
+   '-Wl,--version-script,@0@'.format(gck_symbolmap),
+ )
+ 
+-gck_lib = shared_library('gck-@0@'.format(gck_major_version),
++gck_lib = shared_library(gck_basename,
+   gck_sources,
+   dependencies: gck_deps,
+   c_args: gck_cflags,
+@@ -130,8 +131,8 @@ if get_option('introspection')
+   gck_gir = gnome.generate_gir(gck_lib,
+     sources: gck_gir_sources,
+     namespace: 'Gck',
+-    nsversion: '@0@'.format(gck_major_version),
+-    export_packages: 'gck-@0@'.format(gck_major_version),
++    nsversion: gck_api_version,
++    export_packages: gck_basename,
+     includes: [ 'GObject-2.0', 'Gio-2.0' ],
+     header: 'gck/gck.h',
+     extra_args: [
+@@ -141,7 +142,7 @@ if get_option('introspection')
+     install: true,
+   )
+ 
+-  gck_vapi = gnome.generate_vapi('gck-@0@'.format(gck_major_version),
++  gck_vapi = gnome.generate_vapi(gck_basename,
+     sources: gck_gir[0],
+     metadata_dirs: meson.current_source_dir(),
+     packages: [ 'glib-2.0', 'gio-2.0' ],
+@@ -157,7 +158,7 @@ endif
+ pkgconfig.generate(gck_lib,
+   description: 'GObject bindings for PKCS#11',
+   requires: [ glib_dep, gio_dep, gobject_dep, p11kit_dep ],
+-  subdirs: 'gck-@0@'.format(gck_major_version),
++  subdirs: gck_header_subdir,
+ )
+ 
+ # tests
+diff --git a/gcr/meson.build b/gcr/meson.build
+index 74a8e94..d2f548d 100644
+--- a/gcr/meson.build
++++ b/gcr/meson.build
+@@ -1,4 +1,5 @@
+-gcr_base_headers_install_dir = 'gcr-@0@'.format(gcr_major_version) / 'gcr'
++gcr_base_headers_subdir = 'gcr-@0@'.format(gcr_api_version)
++gcr_base_headers_install_dir = gcr_base_headers_subdir / 'gcr'
+ 
+ gcr_base_public_sources = files(
+   'gcr-certificate.c',
+@@ -154,7 +155,7 @@ gcr_base_linkflags = cc.get_supported_link_arguments(
+   '-Wl,--version-script,@0@'.format(gcr_base_symbolmap),
+ )
+ 
+-gcr_base_lib = shared_library('gcr-base-@0@'.format(gcr_major_version),
++gcr_base_lib = shared_library(gcr_base_basename,
+   gcr_base_sources,
+   dependencies: gcr_base_deps,
+   c_args: gcr_base_cflags,
+@@ -189,8 +190,8 @@ if get_option('introspection')
+   gcr_gir = gnome.generate_gir(gcr_base_lib,
+     sources: [ gcr_base_public_sources, gcr_base_headers ],
+     namespace: 'Gcr',
+-    nsversion: '@0@'.format(gcr_major_version),
+-    export_packages: 'gcr-base-@0@'.format(gcr_major_version),
++    nsversion: gcr_api_version,
++    export_packages: gcr_base_basename,
+     includes: [
+       'GObject-2.0',
+       'Gio-2.0',
+@@ -204,7 +205,7 @@ if get_option('introspection')
+     install: true,
+   )
+ 
+-  gcr_vapi = gnome.generate_vapi('gcr-@0@'.format(gcr_major_version),
++  gcr_vapi = gnome.generate_vapi(gcr_basename,
+     sources: gcr_gir[0],
+     packages: [ 'glib-2.0', 'gio-2.0', gck_vapi ],
+     metadata_dirs: meson.current_source_dir(),
+@@ -220,7 +221,7 @@ endif
+ 
+ # pkg-config file
+ pkgconfig.generate(gcr_base_lib,
+-  subdirs: 'gcr-@0@'.format(gcr_major_version),
++  subdirs: gcr_base_headers_subdir,
+   requires: [ glib_dep, gio_dep, gobject_dep, p11kit_dep, gck_lib ],
+   description: 'GObject and GUI library for high level crypto parsing and display',
+ )
+diff --git a/meson.build b/meson.build
+index dea1b69..e2ec57c 100644
+--- a/meson.build
++++ b/meson.build
+@@ -9,6 +9,7 @@ i18n = import('i18n')
+ pkgconfig = import('pkgconfig')
+ 
+ # Versioning
++gcr_api_version = '3'
+ gcr_version = meson.project_version()
+ gcr_soversion = '1.0.0'
+ gcr_version_array = gcr_version.split('.')
+@@ -16,6 +17,7 @@ gcr_major_version = gcr_version_array[0].to_int()
+ gcr_minor_version = gcr_version_array[1].to_int()
+ gcr_micro_version = gcr_version_array[2].to_int()
+ 
++gck_api_version = '1'
+ gck_version = '1.0.0'
+ gck_soversion = '0.0.0'
+ gck_version_array = gck_version.split('.')
+@@ -32,6 +34,11 @@ gcr_prefix = get_option('prefix')
+ libexecbindir = gcr_prefix / get_option('libexecdir')
+ podir = source_root / 'po'
+ 
++gck_basename = 'gck-@0@'.format(gck_api_version)
++gcr_base_basename = 'gcr-base-@0@'.format(gcr_api_version)
++gcr_basename = 'gcr-@0@'.format(gcr_api_version)
++gcr_ui_basename = 'gcr-ui-@0@'.format(gcr_api_version)
++
+ # Dependencies
+ min_glib_version = '2.44'
+ glib_dep = dependency('glib-2.0', version: '>=' + min_glib_version)
+diff --git a/ui/meson.build b/ui/meson.build
+index d5edd86..69144ce 100644
+--- a/ui/meson.build
++++ b/ui/meson.build
+@@ -1,6 +1,6 @@
+ subdir('icons')
+ 
+-gcr_ui_headers_install_dir = 'gcr-@0@'.format(gcr_major_version) / 'ui'
++gcr_ui_headers_install_dir = gcr_base_headers_subdir / 'ui'
+ 
+ gcr_ui_public_sources = files(
+   'gcr-certificate-renderer.c',
+@@ -100,9 +100,6 @@ gcr_ui_linkflags = cc.get_supported_link_arguments(
+ )
+ 
+ # gcr-XX is just the same as gcr-ui-XX
+-gcr_ui_basename = 'gcr-ui-@0@'.format(gcr_major_version)
+-gcr_basename = 'gcr-@0@'.format(gcr_major_version)
+-
+ gcr_ui_lib = shared_library(gcr_ui_basename,
+   gcr_ui_sources,
+   dependencies: gcr_ui_deps,
+@@ -123,14 +120,14 @@ gcr_ui_pkgconf_deps = [
+   gtk_dep,
+ ]
+ pkgconfig.generate(gcr_ui_lib,
+-  subdirs: 'gcr-@0@'.format(gcr_major_version),
++  subdirs: gcr_base_headers_subdir,
+   requires: gcr_ui_pkgconf_deps,
+   description: 'GObject and GUI library for high level crypto parsing and display',
+ )
+ pkgconfig.generate(gcr_ui_lib,
+   filebase: gcr_basename,
+   name: gcr_basename,
+-  subdirs: 'gcr-@0@'.format(gcr_major_version),
++  subdirs: gcr_base_headers_subdir,
+   requires: gcr_ui_pkgconf_deps,
+   description: 'GObject and GUI library for high level crypto parsing and display',
+ )
+@@ -148,8 +145,8 @@ if get_option('introspection')
+   gcr_ui_gir = gnome.generate_gir(gcr_ui_lib,
+     sources: [ gcr_ui_headers, gcr_ui_public_sources ],
+     namespace: 'GcrUi',
+-    nsversion: '@0@'.format(gcr_major_version),
+-    export_packages: 'gcr-ui-@0@'.format(gcr_major_version),
++    nsversion: gcr_api_version,
++    export_packages: gcr_ui_basename,
+     identifier_prefix: 'Gcr',
+     symbol_prefix: 'gcr',
+     includes: [
+@@ -167,7 +164,7 @@ if get_option('introspection')
+     install: true,
+   )
+ 
+-  gcr_ui_vapi = gnome.generate_vapi('gcr-ui-@0@'.format(gcr_major_version),
++  gcr_ui_vapi = gnome.generate_vapi(gcr_ui_basename,
+     sources: gcr_ui_gir[0],
+     packages: [
+       'glib-2.0',
