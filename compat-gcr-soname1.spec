@@ -4,7 +4,7 @@
 #
 Name     : compat-gcr-soname1
 Version  : 3.41.1
-Release  : 23
+Release  : 24
 URL      : https://download.gnome.org/sources/gcr/3.41/gcr-3.41.1.tar.xz
 Source0  : https://download.gnome.org/sources/gcr/3.41/gcr-3.41.1.tar.xz
 Summary  : GObject and GUI library for high level crypto parsing and display
@@ -16,7 +16,6 @@ Requires: compat-gcr-soname1-lib = %{version}-%{release}
 Requires: compat-gcr-soname1-libexec = %{version}-%{release}
 Requires: compat-gcr-soname1-license = %{version}-%{release}
 Requires: compat-gcr-soname1-locales = %{version}-%{release}
-Requires: compat-gcr-soname1-services = %{version}-%{release}
 BuildRequires : buildreq-gnome
 BuildRequires : buildreq-meson
 BuildRequires : dbus
@@ -47,7 +46,6 @@ Group: Binaries
 Requires: compat-gcr-soname1-data = %{version}-%{release}
 Requires: compat-gcr-soname1-libexec = %{version}-%{release}
 Requires: compat-gcr-soname1-license = %{version}-%{release}
-Requires: compat-gcr-soname1-services = %{version}-%{release}
 
 %description bin
 bin components for the compat-gcr-soname1 package.
@@ -118,14 +116,6 @@ Group: Default
 locales components for the compat-gcr-soname1 package.
 
 
-%package services
-Summary: services components for the compat-gcr-soname1 package.
-Group: Systemd services
-
-%description services
-services components for the compat-gcr-soname1 package.
-
-
 %prep
 %setup -q -n gcr-3.41.1
 cd %{_builddir}/gcr-3.41.1
@@ -135,7 +125,7 @@ export http_proxy=http://127.0.0.1:9/
 export https_proxy=http://127.0.0.1:9/
 export no_proxy=localhost,127.0.0.1,0.0.0.0
 export LANG=C.UTF-8
-export SOURCE_DATE_EPOCH=1663969419
+export SOURCE_DATE_EPOCH=1663973536
 export GCC_IGNORE_WERROR=1
 export AR=gcc-ar
 export RANLIB=gcc-ranlib
@@ -159,6 +149,10 @@ mkdir -p %{buildroot}/usr/share/package-licenses/compat-gcr-soname1
 cp %{_builddir}/gcr-%{version}/COPYING %{buildroot}/usr/share/package-licenses/compat-gcr-soname1/5fb362ef1680e635fe5fb212b55eef4db9ead48f || :
 DESTDIR=%{buildroot} ninja -C builddir install
 %find_lang gcr
+## Remove excluded files
+rm -f %{buildroot}*/usr/lib/systemd/user/gcr-ssh-agent.service
+rm -f %{buildroot}*/usr/lib/systemd/user/gcr-ssh-agent.socket
+rm -f %{buildroot}*/usr/libexec/gcr-ssh-agent
 
 %files
 %defattr(-,root,root,-)
@@ -1251,17 +1245,11 @@ DESTDIR=%{buildroot} ninja -C builddir install
 %files libexec
 %defattr(-,root,root,-)
 /usr/libexec/gcr-prompter
-/usr/libexec/gcr-ssh-agent
 /usr/libexec/gcr-ssh-askpass
 
 %files license
 %defattr(0644,root,root,0755)
 /usr/share/package-licenses/compat-gcr-soname1/5fb362ef1680e635fe5fb212b55eef4db9ead48f
-
-%files services
-%defattr(-,root,root,-)
-/usr/lib/systemd/user/gcr-ssh-agent.service
-/usr/lib/systemd/user/gcr-ssh-agent.socket
 
 %files locales -f gcr.lang
 %defattr(-,root,root,-)
